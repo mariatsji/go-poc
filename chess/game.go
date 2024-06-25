@@ -100,26 +100,39 @@ func SetPiece(piece ColoredPiece, board Board, row, col int) Board {
 }
 
 // remove a piece from the board
-func ClearPiece(board Board, row, col int) {
+func ClearPiece(board Board, row, col int) Board {
 	for pi := 0; pi < 12; pi++ {
-		clearBit(board[pi], row, col)
+		board[pi] = clearBit(board[pi], row, col)
 	}
-}
-
-// setBit sets the bit at the given position on the chessboard.
-func setBit(board uint64, row, col int) uint64 {
-	board |= 1 << (row*8 + col)
 	return board
 }
 
+// make a move
+func Move(board Board, fromRow, fromCol, toRow, toCol int) Board {
+	pieceMaybe := PieceAt(board, fromRow, fromCol)
+	functional.DoIf(pieceMaybe,
+		(func(coloredPiece ColoredPiece) {
+			board = SetPiece(coloredPiece, board, toRow, toCol)
+		}))
+	board = ClearPiece(board, fromRow, fromCol)
+	return board
+}
+
+// setBit sets the bit at the given position on the chessboard.
+func setBit(x uint64, row, col int) uint64 {
+	x |= 1 << (row*8 + col)
+	return x
+}
+
 // clearBit clears the bit at the given position on the chessboard.
-func clearBit(board uint64, row, col int) {
-	board &^= 1 << (row*8 + col)
+func clearBit(x uint64, row, col int) uint64 {
+	x &^= 1 << (row*8 + col)
+	return x
 }
 
 // isSet checks if the bit at the given position on the chessboard is set.
-func isSet(board uint64, row, col int) bool {
-	return board&(1<<(row*8+col)) != 0
+func isSet(x uint64, row, col int) bool {
+	return x&(1<<(row*8+col)) != 0
 }
 
 func PieceAt(board Board, row, col int) functional.Maybe[ColoredPiece] {
@@ -185,8 +198,21 @@ func StartBoard() Board {
 	return retVal
 }
 
-func PawnMoves(board Board) []Board {
+func PawnMoves(color Color, board Board) []Board {
 	twoSteps := make([]Board, 0)
+	homePawnRow := 1
+	if color == Black {
+		homePawnRow = 6
+	}
+	destinationRow := 3
+	if color == Black {
+		destinationRow = 4
+	}
+	for col := 0; col < 7; col++ {
+		if PieceAt(board, homePawnRow, col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
+			twoSteps = append(twoSteps, Move(board, col, homePawnRow, col, destinationRow))
+		}
+	}
 	oneSteps := make([]Board, 0)
 	takesRight := make([]Board, 0)
 	takesLeft := make([]Board, 0)
@@ -215,6 +241,9 @@ func PawnMoves(board Board) []Board {
 }
 
 func Run() {
-	start := StartBoard()
-	fmt.Println(start)
+	board := StartBoard()
+	fmt.Println(board)
+
+	board = Move(board, 1, 4, 3, 4)
+	fmt.Println(board)
 }

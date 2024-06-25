@@ -25,6 +25,13 @@ func Get[A any](m Maybe[A]) *A {
 	return m.some
 }
 
+func DoIf[A any](m Maybe[A], fn (func (A))) {
+	if !m.none {
+		it := m.some
+		fn(*it)
+	}
+}
+
 func Fmap[A any, B any](fn (func (A) B), s []A) []B {
 	retVal := []B{}
 	for i := 0; i < len(s); i++ {
