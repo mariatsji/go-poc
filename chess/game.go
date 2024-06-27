@@ -240,7 +240,7 @@ func PawnMoves(board Board, color Color, ch chan Board) {
 	if color == Black {
 		homePawnRow = 6
 	}
-	
+
 	destRow := func(row int) int {
 		if color == White {
 			return row + 1
@@ -248,7 +248,7 @@ func PawnMoves(board Board, color Color, ch chan Board) {
 			return row - 1
 		}
 	}
-	doubleMoves := func() {
+	doubleMoves := func(square Square) {
 		destinationRow := 3
 		midRow := 2
 		if color == Black {
@@ -257,25 +257,23 @@ func PawnMoves(board Board, color Color, ch chan Board) {
 		if color == Black {
 			destinationRow = 4
 		}
-		for col := 0; col < 8; col++ {
-			if SlowPieceAt(board, homePawnRow, col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
-				if SlowVacantAt(board, destinationRow, col) && SlowVacantAt(board, midRow, col) {
-					m := Move(board, homePawnRow, col, destinationRow, col)
-					ch <- m
-				}
-			}
-		}
-	}
-	singleMoves := func() {
-		for _, square := range FindAll(board, Pawn, color) {
-			if SlowVacantAt(board, destRow(square.Row), square.Col) {
-				m := Move(board, square.Row, square.Col, destRow(square.Row), square.Col)
+		if square.Row == homePawnRow && SlowPieceAt(board, homePawnRow, square.Col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
+			if SlowVacantAt(board, destinationRow, square.Col) && SlowVacantAt(board, midRow, square.Col) {
+				m := Move(board, homePawnRow, square.Col, destinationRow, square.Col)
 				ch <- m
 			}
 		}
 	}
-	singleMoves()
-	doubleMoves()		
+	singleMoves := func(square Square) {
+		if SlowVacantAt(board, destRow(square.Row), square.Col) {
+			m := Move(board, square.Row, square.Col, destRow(square.Row), square.Col)
+			ch <- m
+		}
+	}
+	for _, square := range FindAll(board, Pawn, color) {
+		singleMoves(square)
+		doubleMoves(square)
+	}
 	close(ch)
 }
 
