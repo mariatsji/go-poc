@@ -97,7 +97,7 @@ func (b Board) String() string {
 func SetPiece(piece ColoredPiece, board Board, row, col int) Board {
 	idx := int(piece.Piece)
 	if piece.Color == Black {
-		idx += 6 
+		idx += 6
 	}
 	board[idx] = setBit(board[idx], row, col)
 	return board
@@ -119,8 +119,7 @@ func Move(board Board, fromRow, fromCol, toRow, toCol int) Board {
 		(func(coloredPiece ColoredPiece) {
 			board = SetPiece(coloredPiece, board, toRow, toCol)
 		}))
-	board = ClearPiece(board, fromRow, fromCol)
-	return board
+	return ClearPiece(board, fromRow, fromCol)
 }
 
 // setBit sets the bit at the given position on the chessboard.
@@ -138,6 +137,10 @@ func clearBit(x uint64, row, col int) uint64 {
 // isSet checks if the bit at the given position on the chessboard is set.
 func isSet(x uint64, row, col int) bool {
 	return x&(1<<(row*8+col)) != 0
+}
+
+func SlowVacantAt(board Board, row, col int) bool {
+	return SlowPieceAt(board, row, col) == functional.None[ColoredPiece]()
 }
 
 func SlowPieceAt(board Board, row, col int) functional.Maybe[ColoredPiece] {
@@ -169,6 +172,30 @@ func From(row, col int) uint64 {
 	return uint64(row*8 + col)
 }
 
+type Square = struct {
+	Row int
+	Col int
+}
+
+func FindAll(board Board, piece Piece, color Color) []Square {
+	idx := int(piece)
+	if color == Black {
+		idx += 6
+	}
+	n := board[idx]
+	var positions []uint64
+	for i := 0; i < 64; i++ {
+		// Check if the bit at position i is set.
+		if (n & (1 << i)) != 0 {
+			positions = append(positions, uint64(i))
+		}
+	}
+	return functional.Fmap(func(x uint64) Square {
+		row, col := To(x)
+		return Square{row, col}
+	}, positions)
+}
+
 func StartBoard() Board {
 	retVal := Board{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	retVal = SetPiece(ColoredPiece{White, Pawn}, retVal, 1, 0)
@@ -187,7 +214,7 @@ func StartBoard() Board {
 	retVal = SetPiece(ColoredPiece{White, Bishop}, retVal, 0, 5)
 	retVal = SetPiece(ColoredPiece{White, Knight}, retVal, 0, 6)
 	retVal = SetPiece(ColoredPiece{White, Rook}, retVal, 0, 7)
-	
+
 	retVal = SetPiece(ColoredPiece{Black, Pawn}, retVal, 6, 0)
 	retVal = SetPiece(ColoredPiece{Black, Pawn}, retVal, 6, 1)
 	retVal = SetPiece(ColoredPiece{Black, Pawn}, retVal, 6, 2)
@@ -215,13 +242,19 @@ func PawnMoves(color Color, board Board) []Board {
 		homePawnRow = 6
 	}
 	destinationRow := 3
+	midRow := 2
+	if color == Black {
+		midRow = 5
+	}
 	if color == Black {
 		destinationRow = 4
 	}
 	for col := 0; col < 8; col++ {
 		if SlowPieceAt(board, homePawnRow, col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
-			m := Move(board, homePawnRow, col, destinationRow, col)
-			twoSteps = append(twoSteps, m)
+			if SlowVacantAt(board, destinationRow, col) && SlowVacantAt(board, midRow, col) {
+				m := Move(board, homePawnRow, col, destinationRow, col)
+				twoSteps = append(twoSteps, m)
+			}
 		}
 	}
 	oneSteps := make([]Board, 0)
@@ -254,8 +287,12 @@ func PawnMoves(color Color, board Board) []Board {
 func Run() {
 	board := StartBoard()
 
-	res := PawnMoves(White, board)
+	// res := PawnMoves(White, board)
 
- 	functional.ForEach((func (b Board) { fmt.Println(b) }), res)
+	// functional.ForEach((func(b Board) { fmt.Println(b) }), res)
+
+	res := FindAll(board, Pawn, Black)
+
+	functional.ForEach((func(s Square) { fmt.Println(s) }), res)
 
 }

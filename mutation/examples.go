@@ -38,6 +38,13 @@ func Slices() {
 	fmt.Println(s)
 }
 
+func Pointers() {
+	var i int = 3
+	var p1 = &i
+	var p2 = &i
+	fmt.Println(p1 == p2)
+}
+
 func Run() {
-	Slices()
+	Pointers()
 }
