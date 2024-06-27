@@ -235,8 +235,7 @@ func StartBoard() Board {
 	return retVal
 }
 
-func PawnMoves(board Board, color Color) []Board {
-	twoSteps := make([]Board, 0)
+func PawnMoves(board Board, color Color, ch chan Board) {
 	homePawnRow := 1
 	if color == Black {
 		homePawnRow = 6
@@ -253,46 +252,23 @@ func PawnMoves(board Board, color Color) []Board {
 		if SlowPieceAt(board, homePawnRow, col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
 			if SlowVacantAt(board, destinationRow, col) && SlowVacantAt(board, midRow, col) {
 				m := Move(board, homePawnRow, col, destinationRow, col)
-				twoSteps = append(twoSteps, m)
+				ch <- m
 			}
 		}
 	}
-	oneSteps := make([]Board, 0)
-	takesRight := make([]Board, 0)
-	takesLeft := make([]Board, 0)
-	promotions := make([]Board, 0)
-	promotionsTakesLeft := make([]Board, 0)
-	promotionsTakesRight := make([]Board, 0)
-	enPassant := make([]Board, 0)
-	retVal :=
-		append(
-			append(
-				append(
-					append(
-						append(
-							append(
-								append(
-									twoSteps,
-									oneSteps...),
-								takesRight...),
-							takesLeft...),
-						promotions...),
-					promotionsTakesLeft...),
-				promotionsTakesRight...),
-			enPassant...)
-
-	return retVal
+	close(ch)
 }
 
 func Run() {
 	board := StartBoard()
 
-	// res := PawnMoves(board, White)
+	ch := make(chan Board)
+	go PawnMoves(board, White, ch)
 
-	// functional.ForEach((func(b Board) { fmt.Println(b) }), res)
+	for b := range ch {
+		fmt.Println(b)
+	}
 
-	res := FindAll(board, Pawn, Black)
-
-	functional.ForEach((func(s Square) { fmt.Println(s) }), res)
+	fmt.Println("Program exiting")
 
 }
