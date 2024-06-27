@@ -235,7 +235,7 @@ func StartBoard() Board {
 	return retVal
 }
 
-func PawnMoves(color Color, board Board) []Board {
+func PawnMoves(board Board, color Color) []Board {
 	twoSteps := make([]Board, 0)
 	homePawnRow := 1
 	if color == Black {
@@ -287,7 +287,7 @@ func PawnMoves(color Color, board Board) []Board {
 func Run() {
 	board := StartBoard()
 
-	// res := PawnMoves(White, board)
+	// res := PawnMoves(board, White)
 
 	// functional.ForEach((func(b Board) { fmt.Println(b) }), res)
 
