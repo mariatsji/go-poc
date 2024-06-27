@@ -5,30 +5,29 @@ import (
 )
 
 type Maybe[A any] struct {
-    some *A
+    some A
     none bool // Indicates whether there is a value or not.
 }
 
 func Some[A any](value A) Maybe[A] {
-    return Maybe[A]{some: &value, none: false}
+    return Maybe[A]{some: value, none: false}
 }
 
 func None[A any]() Maybe[A] {
-    return Maybe[A]{some: nil, none: true}
+    return Maybe[A]{none: true}
 }
 
 func Empty[A any](m Maybe[A]) bool {
 	return m.none
 }
 
-func Get[A any](m Maybe[A]) *A {
+func Get[A any](m Maybe[A]) A {
 	return m.some
 }
 
 func DoIf[A any](m Maybe[A], fn (func (A))) {
 	if !m.none {
-		it := m.some
-		fn(*it)
+		fn(m.some)
 	}
 }
 

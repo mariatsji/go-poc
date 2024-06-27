@@ -52,7 +52,7 @@ func (p ColoredPiece) String() string {
 		if p.Color == White {
 			return "♖"
 		} else {
-			return "♖"
+			return "♜"
 		}
 	case Queen:
 		if p.Color == White {
@@ -77,7 +77,7 @@ func (b Board) String() string {
 	retVal := ""
 	for row := 7; row >= 0; row-- {
 		for col := 0; col <= 7; col++ {
-			pieceMaybe := PieceAt(b, row, col)
+			pieceMaybe := SlowPieceAt(b, row, col)
 			if functional.Empty[ColoredPiece](pieceMaybe) {
 				if (col+row)%2 == 0 {
 					retVal += "▫"
@@ -95,7 +95,11 @@ func (b Board) String() string {
 
 // set a piece at the board
 func SetPiece(piece ColoredPiece, board Board, row, col int) Board {
-	board[int(piece.Piece)] = setBit(board[int(piece.Piece)], row, col)
+	idx := int(piece.Piece)
+	if piece.Color == Black {
+		idx += 6 
+	}
+	board[idx] = setBit(board[idx], row, col)
 	return board
 }
 
@@ -108,8 +112,9 @@ func ClearPiece(board Board, row, col int) Board {
 }
 
 // make a move
+// returns new Board - does not mutate incoming Board!
 func Move(board Board, fromRow, fromCol, toRow, toCol int) Board {
-	pieceMaybe := PieceAt(board, fromRow, fromCol)
+	pieceMaybe := SlowPieceAt(board, fromRow, fromCol)
 	functional.DoIf(pieceMaybe,
 		(func(coloredPiece ColoredPiece) {
 			board = SetPiece(coloredPiece, board, toRow, toCol)
@@ -135,14 +140,18 @@ func isSet(x uint64, row, col int) bool {
 	return x&(1<<(row*8+col)) != 0
 }
 
-func PieceAt(board Board, row, col int) functional.Maybe[ColoredPiece] {
+func SlowPieceAt(board Board, row, col int) functional.Maybe[ColoredPiece] {
 	for pi := 0; pi < 12; pi++ {
 		color := White
 		if pi > 5 {
 			color = Black
 		}
 		if isSet(board[pi], row, col) {
-			return functional.Some(ColoredPiece{color, Piece(pi)})
+			piece := Piece(pi)
+			if color == Black {
+				piece = Piece(pi - 6)
+			}
+			return functional.Some(ColoredPiece{color, piece})
 		}
 	}
 	return functional.None[ColoredPiece]()
@@ -178,6 +187,7 @@ func StartBoard() Board {
 	retVal = SetPiece(ColoredPiece{White, Bishop}, retVal, 0, 5)
 	retVal = SetPiece(ColoredPiece{White, Knight}, retVal, 0, 6)
 	retVal = SetPiece(ColoredPiece{White, Rook}, retVal, 0, 7)
+	
 	retVal = SetPiece(ColoredPiece{Black, Pawn}, retVal, 6, 0)
 	retVal = SetPiece(ColoredPiece{Black, Pawn}, retVal, 6, 1)
 	retVal = SetPiece(ColoredPiece{Black, Pawn}, retVal, 6, 2)
@@ -208,9 +218,10 @@ func PawnMoves(color Color, board Board) []Board {
 	if color == Black {
 		destinationRow = 4
 	}
-	for col := 0; col < 7; col++ {
-		if PieceAt(board, homePawnRow, col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
-			twoSteps = append(twoSteps, Move(board, col, homePawnRow, col, destinationRow))
+	for col := 0; col < 8; col++ {
+		if SlowPieceAt(board, homePawnRow, col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
+			m := Move(board, homePawnRow, col, destinationRow, col)
+			twoSteps = append(twoSteps, m)
 		}
 	}
 	oneSteps := make([]Board, 0)
@@ -242,8 +253,9 @@ func PawnMoves(color Color, board Board) []Board {
 
 func Run() {
 	board := StartBoard()
-	fmt.Println(board)
 
-	board = Move(board, 1, 4, 3, 4)
-	fmt.Println(board)
+	res := PawnMoves(White, board)
+
+ 	functional.ForEach((func (b Board) { fmt.Println(b) }), res)
+
 }

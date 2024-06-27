@@ -4,6 +4,6 @@ let nixpkgs = import (builtins.fetchTarball {
 
 in nixpkgs.mkShell {
   name = "go-poc";
-  buildInputs = with nixpkgs; [ go gopls ];
+  buildInputs = with nixpkgs; [ go gopls delve ];
 }
 
