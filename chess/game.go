@@ -240,26 +240,48 @@ func PawnMoves(board Board, color Color, ch chan Board) {
 	if color == Black {
 		homePawnRow = 6
 	}
-	destinationRow := 3
-	midRow := 2
-	if color == Black {
-		midRow = 5
+	
+	destRow := func(row int) int {
+		if color == White {
+			return row + 1
+		} else {
+			return row - 1
+		}
 	}
-	if color == Black {
-		destinationRow = 4
+	doubleMoves := func() {
+		destinationRow := 3
+		midRow := 2
+		if color == Black {
+			midRow = 5
+		}
+		if color == Black {
+			destinationRow = 4
+		}
+		for col := 0; col < 8; col++ {
+			if SlowPieceAt(board, homePawnRow, col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
+				if SlowVacantAt(board, destinationRow, col) && SlowVacantAt(board, midRow, col) {
+					m := Move(board, homePawnRow, col, destinationRow, col)
+					ch <- m
+				}
+			}
+		}
 	}
-	for col := 0; col < 8; col++ {
-		if SlowPieceAt(board, homePawnRow, col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
-			if SlowVacantAt(board, destinationRow, col) && SlowVacantAt(board, midRow, col) {
-				m := Move(board, homePawnRow, col, destinationRow, col)
+	singleMoves := func() {
+		for _, square := range FindAll(board, Pawn, color) {
+			if SlowVacantAt(board, destRow(square.Row), square.Col) {
+				m := Move(board, square.Row, square.Col, destRow(square.Row), square.Col)
 				ch <- m
 			}
 		}
 	}
+	singleMoves()
+	doubleMoves()		
 	close(ch)
 }
 
 func Run() {
+	defer fmt.Println("Program exiting")
+
 	board := StartBoard()
 
 	ch := make(chan Board)
@@ -268,7 +290,5 @@ func Run() {
 	for b := range ch {
 		fmt.Println(b)
 	}
-
-	fmt.Println("Program exiting")
 
 }
