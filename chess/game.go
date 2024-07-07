@@ -77,7 +77,7 @@ func (b Board) String() string {
 	retVal := ""
 	for row := 7; row >= 0; row-- {
 		for col := 0; col <= 7; col++ {
-			pieceMaybe := SlowPieceAt(b, row, col)
+			pieceMaybe := SlowPieceAt(b, Square{row, col})
 			if functional.Empty[ColoredPiece](pieceMaybe) {
 				if (col+row)%2 == 0 {
 					retVal += "▫"
@@ -91,6 +91,10 @@ func (b Board) String() string {
 		retVal += "\n"
 	}
 	return retVal
+}
+
+func InsideBoard(square Square) bool {
+	return square.Row > 0 && square.Row < 8 && square.Col > 0 && square.Col < 8
 }
 
 // set a piece at the board
@@ -113,13 +117,14 @@ func ClearPiece(board Board, row, col int) Board {
 
 // make a move
 // returns new Board - does not mutate incoming Board!
-func Move(board Board, fromRow, fromCol, toRow, toCol int) Board {
-	pieceMaybe := SlowPieceAt(board, fromRow, fromCol)
+func Move(board Board, fromSquare Square, toSquare Square) Board {
+	pieceMaybe := SlowPieceAt(board, fromSquare)
 	functional.DoIf(pieceMaybe,
 		(func(coloredPiece ColoredPiece) {
-			board = SetPiece(coloredPiece, board, toRow, toCol)
+			board = SetPiece(coloredPiece, board, toSquare.Row, toSquare.Col)
 		}))
-	return ClearPiece(board, fromRow, fromCol)
+	clearFrom := ClearPiece(board, fromSquare.Row, fromSquare.Col)
+	return ClearPiece(clearFrom, toSquare.Row, toSquare.Col)
 }
 
 // setBit sets the bit at the given position on the chessboard.
@@ -139,17 +144,30 @@ func isSet(x uint64, row, col int) bool {
 	return x&(1<<(row*8+col)) != 0
 }
 
-func SlowVacantAt(board Board, row, col int) bool {
-	return SlowPieceAt(board, row, col) == functional.None[ColoredPiece]()
+func SlowVacantAt(board Board, square Square) bool {
+	return SlowPieceAt(board, square) == functional.None[ColoredPiece]()
 }
 
-func SlowPieceAt(board Board, row, col int) functional.Maybe[ColoredPiece] {
+func HasColorPieceAt(board Board, square Square, enemy Color) (ret bool) {
+	functional.DoIf(
+		SlowPieceAt(board, square),
+		(func(p ColoredPiece) {
+			if p.Color == enemy {
+				ret = true
+			}
+		}),
+	)
+	return ret
+
+}
+
+func SlowPieceAt(board Board, square Square) functional.Maybe[ColoredPiece] {
 	for pi := 0; pi < 12; pi++ {
 		color := White
 		if pi > 5 {
 			color = Black
 		}
-		if isSet(board[pi], row, col) {
+		if isSet(board[pi], square.Row, square.Col) {
 			piece := Piece(pi)
 			if color == Black {
 				piece = Piece(pi - 6)
@@ -257,22 +275,45 @@ func PawnMoves(board Board, color Color, ch chan Board) {
 		if color == Black {
 			destinationRow = 4
 		}
-		if square.Row == homePawnRow && SlowPieceAt(board, homePawnRow, square.Col) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
-			if SlowVacantAt(board, destinationRow, square.Col) && SlowVacantAt(board, midRow, square.Col) {
-				m := Move(board, homePawnRow, square.Col, destinationRow, square.Col)
-				ch <- m
+		if square.Row == homePawnRow && SlowPieceAt(board, Square{homePawnRow, square.Col}) == functional.Some[ColoredPiece](ColoredPiece{color, Pawn}) {
+			if SlowVacantAt(board, Square{destinationRow, square.Col}) && SlowVacantAt(board, Square{midRow, square.Col}) {
+				ch <- Move(board, Square{homePawnRow, square.Col}, Square{destinationRow, square.Col})
 			}
 		}
 	}
 	singleMoves := func(square Square) {
-		if SlowVacantAt(board, destRow(square.Row), square.Col) {
-			m := Move(board, square.Row, square.Col, destRow(square.Row), square.Col)
-			ch <- m
+		if SlowVacantAt(board, Square{destRow(square.Row), square.Col}) {
+			ch <- Move(board, Square{square.Row, square.Col}, Square{destRow(square.Row), square.Col})
 		}
+	}
+	pawnTakeSquares := func(square Square, color Color) []Square {
+		up := square.Row + 1
+		if color == Black {
+			up = square.Row - 1
+		}
+		inside := func(s Square) bool { return InsideBoard(s) }
+		return functional.Filter(
+			[]Square{{up, square.Col - 1}, {up, square.Col + 1}},
+			inside,
+		)
+	}
+	takes := func(square Square) {
+		for _, s := range pawnTakeSquares(square, color) {
+			enemy := Black
+			if color == Black {
+				enemy = White
+			}
+			if HasColorPieceAt(board, s, enemy) {
+				ch <- Move(board, square, s)
+			}
+		}
+
+		// use pawnTakeSquares
 	}
 	for _, square := range FindAll(board, Pawn, color) {
 		singleMoves(square)
 		doubleMoves(square)
+		takes(square)
 	}
 	close(ch)
 }

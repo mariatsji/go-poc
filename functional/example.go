@@ -45,6 +45,15 @@ func ForEach[A any](fn (func (A)), s []A) {
 	}
 }
 
+func Filter[A any](a []A, fn func(A) bool) (ret []A) {
+	for _, v := range a {
+		if fn(v) {
+			ret = append(ret, v)
+		}
+	}
+	return ret
+}
+
 func Run() {
 	var double func (int) int = func(x int) int { return x * 2 }
 	var slice []int = []int{1,2,3}
