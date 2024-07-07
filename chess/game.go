@@ -121,10 +121,10 @@ func Move(board Board, fromSquare Square, toSquare Square) Board {
 	pieceMaybe := SlowPieceAt(board, fromSquare)
 	functional.DoIf(pieceMaybe,
 		(func(coloredPiece ColoredPiece) {
-			board = SetPiece(coloredPiece, board, toSquare.Row, toSquare.Col)
+			clearedTo := ClearPiece(board, toSquare.Row, toSquare.Col)
+			board = SetPiece(coloredPiece, clearedTo, toSquare.Row, toSquare.Col)
 		}))
-	clearFrom := ClearPiece(board, fromSquare.Row, fromSquare.Col)
-	return ClearPiece(clearFrom, toSquare.Row, toSquare.Col)
+	return ClearPiece(board, fromSquare.Row, fromSquare.Col)
 }
 
 // setBit sets the bit at the given position on the chessboard.
@@ -327,6 +327,16 @@ func Run() {
 	go PawnMoves(board, White, ch)
 
 	for b := range ch {
+		fmt.Println(b)
+	}
+
+	b := StartBoard()
+	b1 := Move(b, Square{1,0}, Square{3,0})
+	b2 := Move(b1, Square{6,1}, Square{4,1})
+	ch2 := make(chan Board)
+	go PawnMoves(b2, White, ch2)
+
+	for b := range ch2 {
 		fmt.Println(b)
 	}
 
