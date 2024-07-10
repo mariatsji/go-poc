@@ -2,3 +2,4 @@ pkg
 .vscode
 bin
 bin
+go-poc

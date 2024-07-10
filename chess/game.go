@@ -253,6 +253,10 @@ func StartBoard() Board {
 	return retVal
 }
 
+func KnightMoves(board Board, color Color, ch chan Board) {
+	
+}
+
 func PawnMoves(board Board, color Color, ch chan Board) {
 	homePawnRow := 1
 	if color == Black {
@@ -307,8 +311,6 @@ func PawnMoves(board Board, color Color, ch chan Board) {
 				ch <- Move(board, square, s)
 			}
 		}
-
-		// use pawnTakeSquares
 	}
 	for _, square := range FindAll(board, Pawn, color) {
 		singleMoves(square)

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"go-poc/chess"
+	"go-poc/functional"
 )
 
 func main() {
-	chess.Run()
+	functional.Run()
 }
